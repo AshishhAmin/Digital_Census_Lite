@@ -7,7 +7,9 @@ const AdminPanel = () => {
     const [activeTab, setActiveTab] = useState('responses');
     const [responses, setResponses] = useState([]);
     const [questions, setQuestions] = useState([]);
-    const [newQuestion, setNewQuestion] = useState({ text: '', field_type: 'text', options: '' });
+    const [surveyors, setSurveyors] = useState([]);
+    const [newQuestion, setNewQuestion] = useState({ text: '', field_type: 'text', options: '', order: 0 });
+    const [editingId, setEditingId] = useState(null); // Track which question is being edited
     const [filterSurveyor, setFilterSurveyor] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -41,6 +43,9 @@ const AdminPanel = () => {
             } else if (activeTab === 'questions') {
                 const res = await axios.get('http://127.0.0.1:8000/api/questions/', config);
                 setQuestions(res.data);
+            } else if (activeTab === 'surveyors') {
+                const res = await axios.get('http://127.0.0.1:8000/api/surveyors/', config);
+                setSurveyors(res.data);
             }
             setLoading(false);
         } catch (err) {
@@ -50,20 +55,53 @@ const AdminPanel = () => {
         }
     };
 
-    const handleAddQuestion = async (e) => {
+    const handleSaveQuestion = async (e) => {
         e.preventDefault();
         try {
             const config = { headers: { Authorization: `Token ${token}` } };
-            await axios.post('http://127.0.0.1:8000/api/questions/', {
-                ...newQuestion,
-                is_active: true
-            }, config);
 
-            setNewQuestion({ text: '', field_type: 'text', options: '' });
+            if (editingId) {
+                // Update existing
+                await axios.put(`http://127.0.0.1:8000/api/questions/${editingId}/`, newQuestion, config);
+                setEditingId(null);
+            } else {
+                // Create new
+                await axios.post('http://127.0.0.1:8000/api/questions/', newQuestion, config);
+            }
+
+            setNewQuestion({ text: '', field_type: 'text', options: '', order: 0 });
             fetchData(); // Refresh list
         } catch (err) {
-            alert('Failed to add question');
+            console.error(err);
+            setError('Failed to save question.');
         }
+    };
+
+    const handleEditClick = (question) => {
+        setNewQuestion({
+            text: question.text,
+            field_type: question.field_type,
+            options: question.options || '',
+            order: question.order || 0
+        });
+        setEditingId(question.id);
+    };
+
+    const handleDeleteClick = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this question?')) return;
+        try {
+            const config = { headers: { Authorization: `Token ${token}` } };
+            await axios.delete(`http://127.0.0.1:8000/api/questions/${id}/`, config);
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            setError('Failed to delete question.');
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setEditingId(null);
+        setNewQuestion({ text: '', field_type: 'text', options: '', order: 0 });
     };
 
     const exportCSV = () => {
@@ -146,6 +184,21 @@ const AdminPanel = () => {
                         }}
                     >
                         Manage Questions
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('surveyors')}
+                        style={{
+                            padding: '1rem',
+                            borderBottom: activeTab === 'surveyors' ? '3px solid var(--primary-color)' : 'none',
+                            border: 'none',
+                            background: 'none',
+                            fontWeight: 'bold',
+                            fontSize: '1.2rem',
+                            color: activeTab === 'surveyors' ? 'var(--primary-color)' : 'var(--text-muted)',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Surveyors
                     </button>
                 </div>
 
@@ -329,25 +382,69 @@ const AdminPanel = () => {
                                     <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Existing Questions</h3>
                                     <ul style={{ listStyle: 'none', padding: 0 }}>
                                         {questions.map(q => (
-                                            <li key={q.id} className="card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
-                                                <div style={{ fontWeight: 'bold' }}>{q.text}</div>
-                                                <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Type: {q.field_type}</div>
+                                            <li key={q.id} className="card" style={{ padding: '1.5rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 'bold' }}>{q.text}</div>
+                                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Type: {q.field_type}</div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <button
+                                                        onClick={() => handleEditClick(q)}
+                                                        style={{
+                                                            padding: '0.5rem 1rem',
+                                                            background: '#eab308',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteClick(q.id)}
+                                                        style={{
+                                                            padding: '0.5rem 1rem',
+                                                            background: '#ef4444',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
                                             </li>
                                         ))}
                                     </ul>
                                 </div>
 
                                 <div style={{ background: 'var(--bg-color)', padding: '2rem', borderRadius: 'var(--radius)' }}>
-                                    <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Add New Question</h3>
-                                    <form onSubmit={handleAddQuestion}>
-                                        <div className="form-group">
-                                            <label className="label">Question Text</label>
-                                            <input
-                                                className="input"
-                                                value={newQuestion.text}
-                                                onChange={e => setNewQuestion({ ...newQuestion, text: e.target.value })}
-                                                required
-                                            />
+                                    <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{editingId ? 'Edit Question' : 'Add New Question'}</h3>
+                                    <form onSubmit={handleSaveQuestion}>
+                                        <div className="form-group grid-2" style={{ gap: '1rem', display: 'grid', gridTemplateColumns: '1fr 150px' }}>
+                                            <div>
+                                                <label className="label">Question Text</label>
+                                                <input
+                                                    className="input"
+                                                    value={newQuestion.text}
+                                                    onChange={e => setNewQuestion({ ...newQuestion, text: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="label">Order</label>
+                                                <input
+                                                    type="number"
+                                                    className="input"
+                                                    value={newQuestion.order || 0}
+                                                    onChange={e => setNewQuestion({ ...newQuestion, order: parseInt(e.target.value) || 0 })}
+                                                    required
+                                                />
+                                            </div>
                                         </div>
                                         <div className="form-group">
                                             <label className="label">Type</label>
@@ -372,8 +469,71 @@ const AdminPanel = () => {
                                                 />
                                             </div>
                                         )}
-                                        <button type="submit" className="btn-primary">Add Question</button>
+                                        <div style={{ display: 'flex', gap: '1rem' }}>
+                                            <button type="submit" className="btn-primary">
+                                                {editingId ? 'Update Question' : 'Add Question'}
+                                            </button>
+                                            {editingId && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCancelEdit}
+                                                    style={{
+                                                        padding: '0.75rem 1.5rem',
+                                                        border: '1px solid var(--border-color)',
+                                                        background: 'white',
+                                                        color: 'var(--text-main)',
+                                                        borderRadius: 'var(--radius)',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            )}
+                                        </div>
                                     </form>
+                                </div>
+                            </div>
+                        )}
+
+
+
+                        {activeTab === 'surveyors' && (
+                            <div className="card" style={{ maxWidth: '1000px', margin: '2rem auto', width: '100%' }}>
+                                <h3 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Registered Surveyors</h3>
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+                                        <thead>
+                                            <tr style={{ background: 'var(--bg-color)', textAlign: 'left' }}>
+                                                <th style={{ padding: '1rem' }}>Username</th>
+                                                <th style={{ padding: '1rem' }}>Full Name</th>
+                                                <th style={{ padding: '1rem' }}>Email</th>
+                                                <th style={{ padding: '1rem' }}>Role</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {surveyors.map(s => (
+                                                <tr key={s.username} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                                    <td style={{ padding: '1rem', fontWeight: 'bold' }}>{s.username}</td>
+                                                    <td style={{ padding: '1rem' }}>{s.first_name} {s.last_name}</td>
+                                                    <td style={{ padding: '1rem' }}>{s.email}</td>
+                                                    <td style={{ padding: '1rem' }}>
+                                                        <span style={{
+                                                            background: s.is_staff ? '#dcfce7' : '#f3f4f6',
+                                                            color: s.is_staff ? '#166534' : '#374151',
+                                                            padding: '0.25rem 0.75rem',
+                                                            borderRadius: '999px',
+                                                            fontSize: '0.85rem',
+                                                            fontWeight: '600'
+                                                        }}>
+                                                            {/* We don't have is_staff in serializer yet, but we can assume normal users are surveyors */}
+                                                            Surveyor
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         )}
