@@ -62,7 +62,17 @@ const Login = ({ setAuthToken }) => {
                         />
                     </div>
 
-                    <button type="submit" className="btn-primary">
+                    <button
+                        type="submit"
+                        className="btn-primary"
+                        style={{
+                            display: 'block',
+                            width: 'fit-content',
+                            margin: '0 auto',
+                            paddingLeft: '2rem',
+                            paddingRight: '2rem'
+                        }}
+                    >
                         Login
                     </button>
                 </form>

@@ -5,6 +5,10 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 
+import logo from './assets/logo.svg';
+
+import AdminPanel from './components/AdminPanel';
+
 function App() {
   const [authToken, setAuthToken] = useState(localStorage.getItem('authToken'));
 
@@ -18,7 +22,8 @@ function App() {
     <Router>
       <div className="app-container">
         <nav className="navbar">
-          <div className="brand">
+          <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <img src={logo} alt="Logo" className="nav-logo" style={{ height: '40px', width: '40px' }} />
             Digital Census Lite
           </div>
           <div>
@@ -49,6 +54,10 @@ function App() {
           <Route
             path="/survey"
             element={authToken ? <SurveyForm /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/admin"
+            element={authToken ? <AdminPanel /> : <Navigate to="/login" />}
           />
         </Routes>
       </div>

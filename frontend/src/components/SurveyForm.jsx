@@ -11,7 +11,10 @@ const SurveyForm = () => {
     const [errorMsg, setErrorMsg] = useState('');
 
     useEffect(() => {
-        axios.get('http://127.0.0.1:8000/api/questions/')
+        const token = localStorage.getItem('authToken');
+        axios.get('http://127.0.0.1:8000/api/questions/', {
+            headers: { Authorization: `Token ${token}` }
+        })
             .then(res => setQuestions(res.data))
             .catch(err => console.error(err));
     }, []);
@@ -88,6 +91,34 @@ const SurveyForm = () => {
         setCurrentPage(prev => prev - 1);
     };
 
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+
+            // 1. Prevent moving if empty
+            if (!e.target.value || e.target.value.toString().trim() === '') {
+                setErrorMsg('This field cannot be empty.');
+                return;
+            }
+
+            const form = e.target.form;
+            const index = Array.prototype.indexOf.call(form, e.target);
+            const nextElement = form.elements[index + 1];
+
+            // If next element is an input/select, focus it
+            if (nextElement && (nextElement.tagName === 'INPUT' || nextElement.tagName === 'SELECT')) {
+                nextElement.focus();
+            } else {
+                // If not (e.g. buttons), we are at the end of this page's inputs
+                if (currentPage < totalPages - 1) {
+                    handleNext();
+                } else {
+                    handleSubmit(e);
+                }
+            }
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validatePage()) return;
@@ -123,7 +154,12 @@ const SurveyForm = () => {
                     <button
                         onClick={() => setStatus('idle')}
                         className="btn-primary"
-                        style={{ width: 'auto', padding: '0.75rem 2rem' }}
+                        style={{
+                            width: 'auto',
+                            padding: '0.75rem 2rem',
+                            display: 'block',
+                            margin: '0 auto'
+                        }}
                     >
                         Submit Another Record
                     </button>
@@ -179,6 +215,7 @@ const SurveyForm = () => {
                                     value={answers[q.text] || ''}
                                     onChange={(e) => handleDynamicChange(q.text, e.target.value)}
                                     className="input"
+                                    onKeyDown={handleKeyDown}
                                 />
                             )}
 
@@ -188,6 +225,7 @@ const SurveyForm = () => {
                                     value={answers[q.text] || ''}
                                     onChange={(e) => handleDynamicChange(q.text, e.target.value)}
                                     className="input"
+                                    onKeyDown={handleKeyDown}
                                 />
                             )}
 
@@ -196,6 +234,7 @@ const SurveyForm = () => {
                                     value={answers[q.text] || ''}
                                     onChange={(e) => handleDynamicChange(q.text, e.target.value)}
                                     className="input"
+                                    onKeyDown={handleKeyDown}
                                 >
                                     <option value="">Select...</option>
                                     {q.options.split(',').map((opt) => (

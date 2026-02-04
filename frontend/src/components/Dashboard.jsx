@@ -29,15 +29,20 @@ const Dashboard = () => {
                             <p style={{ marginBottom: '2rem', color: '#666', fontSize: '1.1rem' }}>
                                 Manage questions, view responses, and export data.
                             </p>
-                            <a
-                                href="http://127.0.0.1:8000/admin/"
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <Link
+                                to="/admin"
                                 className="btn-primary"
-                                style={{ display: 'block', textDecoration: 'none' }}
+                                style={{
+                                    display: 'block',
+                                    textDecoration: 'none',
+                                    width: 'fit-content',
+                                    margin: '0 auto',
+                                    paddingLeft: '2rem',
+                                    paddingRight: '2rem'
+                                }}
                             >
                                 Open Admin Panel
-                            </a>
+                            </Link>
                         </div>
                     )}
 
@@ -50,7 +55,15 @@ const Dashboard = () => {
                         <Link
                             to="/survey"
                             className="btn-primary"
-                            style={{ display: 'block', textDecoration: 'none', backgroundColor: '#059669' }}
+                            style={{
+                                display: 'block',
+                                textDecoration: 'none',
+                                backgroundColor: '#059669',
+                                width: 'fit-content',
+                                margin: '0 auto',
+                                paddingLeft: '2rem',
+                                paddingRight: '2rem'
+                            }}
                         >
                             Start New Survey
                         </Link>

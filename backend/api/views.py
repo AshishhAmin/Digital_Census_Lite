@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import authenticate
 from .models import SurveyResponse, Question
@@ -31,10 +31,25 @@ class RegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class QuestionListView(APIView):
+    authentication_classes = [TokenAuthentication]
+    # Allow read-only for authenticated, but POST for admin
+    
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+
     def get(self, request):
         questions = Question.objects.filter(is_active=True)
         serializer = QuestionSerializer(questions, many=True)
         return Response(serializer.data)
+
+    def post(self, request):
+        serializer = QuestionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SurveySubmissionView(APIView):
     authentication_classes = [TokenAuthentication]
@@ -46,3 +61,12 @@ class SurveySubmissionView(APIView):
             serializer.save(surveyor=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class SurveyResponseListView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        responses = SurveyResponse.objects.all().order_by('-created_at')
+        serializer = SurveyResponseSerializer(responses, many=True)
+        return Response(serializer.data)
